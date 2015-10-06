@@ -36,30 +36,83 @@ function kmh2beaufort(kmh)
 	return 12;
 }
 
+function getxml(iddep, idarr, callback)
+{
+	var trams = [];
+	var t = 1;
+	//start AJAX XML call
+	$.ajax({
+		type: "GET",
+		url: "getxml.php?dep="+iddep+"&arr="+idarr,
+		cache: false,
+		dataType: "xml",
+		success: function(xml) {
+			$(xml).find('itdRoute').each(function(){
+				var deptime;
+				var arrtime;
+				var tramhour;
+				var trammin;
+				var changes = $(this).attr('changes');
+				//find first name of first transport
+				var busline = $(this).find('itdMeansOfTransport').attr('name');
+				busline = busline.replace('Omnibus','');
+				//i is to handle routes with changes
+				var i = 0;
+				//find routes
+				$(this).find('itdPartialRoute').each(function(){
+					//search for stations on the way
+					$(this).find('itdPoint').each(function(){
+						//search for departure station and time
+						if ( i == 0 && $(this).attr('usage') == 'departure'){
+						 departure = $(this).attr('nameWO');
+						 tramhour = $(this).find('itdDateTimeTarget').children("itdTime").attr('hour');
+						 trammin = $(this).find('itdDateTimeTarget').children("itdTime").attr('minute');
+						 if (trammin.length < 2){tarmmin = '0'+trammin;}
+						 if (tramhour.length < 2){tramhour = '0'+tramhour;}
+						 deptime = tramhour+':'+trammin;
+						}
+						//search for arrival station and time
+						else if (i == changes && $(this).attr('usage') == 'arrival'){
+						 arrival = $(this).attr('nameWO');
+						 tramhour = $(this).find('itdDateTimeTarget').children("itdTime").attr('hour');
+						 trammin = $(this).find('itdDateTimeTarget').children("itdTime").attr('minute');
+						 if (trammin.length < 2){trammin = '0'+trammin;}
+						 if (tramhour.length < 2){tramhour = '0'+tramhour;}
+						 arrtime = tramhour+':'+trammin;
+						}
+					});
+					i++;
+				})
+				trams[t] = new Array(busline, deptime, arrtime);
+				t++;
+			});
+			trams[0] = new Array(departure, arrival);
+			callback(trams);
+		}
+	})
+
+}
+
 jQuery(document).ready(function($) {
 
 	var news = [];
 	var newsIndex = 0;
+	maxCalLength = 10
 
 	var eventList = [];
 
 	var lastCompliment;
 	var compliment;
+	$('#tramid').hide();
+	$(document).keypress(function(e){
+      if (e.which == 65)
+      {
+				$('#tramid').toggle();
+				$('#calid').toggle();
+      }
+  });
 
     moment.lang(lang);
-
-	//connect do Xbee monitor
-	// var socket = io.connect('http://rpi-alarm.local:8082');
-	// socket.on('dishwasher', function (dishwasherReady) {
-	// 	if (dishwasherReady) {
-	// 		$('.dishwasher').fadeIn(2000);
-	// 		$('.lower-third').fadeOut(2000);
-	// 	} else {
-	// 		$('.dishwasher').fadeOut(2000);
-	// 		$('.lower-third').fadeIn(2000);
-	// 	}
-	// });
-
 
 	(function checkVersion()
 	{
@@ -131,7 +184,8 @@ jQuery(document).ready(function($) {
                     var startDate = moment(e.startDate);
                 }
 
-        		//only add fututre events, days doesn't work, we need to check seconds
+
+      		//only add fututre events, days doesn't work, we need to check seconds
         		if (seconds >= 0) {
                     if (seconds <= 60*60*5 || seconds >= 60*60*24*2) {
                         var time_string = moment(startDate).fromNow();
@@ -143,13 +197,13 @@ jQuery(document).ready(function($) {
                     }
                     e.seconds = seconds;
         		}
-                
+
                 // Special handling for rrule events
                 if (e.RRULE) {
                     var options = new RRule.parseString(e.RRULE);
                     options.dtstart = e.startDate;
                     var rule = new RRule(options);
-                    
+
                     // TODO: don't use fixed end date here, use something like now() + 1 year
                     var dates = rule.between(new Date(), new Date(2016,11,31), true, function (date, i){return i < 10});
                     for (date in dates) {
@@ -164,7 +218,7 @@ jQuery(document).ready(function($) {
                                 var time_string = moment(dt).calendar()
                             }
                             eventList.push({'description':e.SUMMARY,'seconds':seconds,'days':time_string});
-                        }           
+                        }
                     }
                 }
             };
@@ -181,16 +235,21 @@ jQuery(document).ready(function($) {
 		table = $('<table/>').addClass('xsmall').addClass('calendar-table');
 		opacity = 1;
 
-
 		for (var i in eventList) {
+			if (i == maxCalLength)
+			break;
 			var e = eventList[i];
+
+if (e.description.length > 20){
+e.description = e.description.substring(0, 20)+'...';
+}
 
 			var row = $('<tr/>').css('opacity',opacity);
 			row.append($('<td/>').html(e.description).addClass('description'));
 			row.append($('<td/>').html(e.days).addClass('days dimmed'));
 			table.append(row);
 
-			opacity -= 1 / eventList.length;
+			opacity -= 1 / maxCalLength;
 		}
 
 		$('.calendar').updateWithText(table,1000);
@@ -200,12 +259,45 @@ jQuery(document).ready(function($) {
         }, 1000);
 	})();
 
+	(function updateTram()
+	{
+		var opacitytram = 1;
+		maxCalLength = 10
+		var depID = '26000354';
+		var arrID = '26000178';
+		var tramtable = $('<table/>').addClass('tram-table small');
+		var tramrow = $('<tr/>').css('opacity',opacity);
+		tramrow.append($('<td/>').html('Linie   ').addClass('dimmed line'));
+    tramrow.append($('<td/>').html('Abfahrt   ').addClass('timetram description'));
+    tramrow.append($('<td/>').html('Ankunft').addClass('timetram description'));
+    tramtable.append(tramrow);
+
+		//define start and stop IDs for transitroute
+
+		getxml(depID,arrID, function(data){
+			tramtable.prepend($('<caption/>').html('Von '+data[0][0]+' nach '+data[0][1]).addClass('description'));
+			for(var f = 1; f < data.length; f++){
+				tramrow = $('<tr/>').css('opacity',opacitytram);
+				tramrow.append($('<td/>').html(data[f][0]).addClass('dimmed line'));
+				tramrow.append($('<td/>').html(data[f][1]).addClass('timetram description'));
+				tramrow.append($('<td/>').html(data[f][2]).addClass('timetram description'));
+				tramtable.append(tramrow);
+				opacitytram -= 1 / maxCalLength;
+			}
+		});
+		$('.tram').updateWithText(tramtable,1000);
+		$('#tramid').hide();
+		setTimeout(function() {
+        	updateTram();
+        }, 600000);
+	})();
+
 	(function updateCompliment()
 	{
         //see compliments.js
 		while (compliment == lastCompliment) {
-     
-      //Check for current time  
+
+      //Check for current time
       var compliments;
       var date = new Date();
       var hour = date.getHours();

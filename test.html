@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>jQuery Beispiel: Tastatureingabe abfragen</title>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('input').keypress(function(e){
+      if (e.which == 65)
+      {
+        alert('Es wurde A gedrückt');
+      }
+  });
+});
+</script>
+</head>
+<body>
+<h1>jQuery Beispiel Tastatureingabe </h1>
+<input type="text"></input>
+</body>
+</html>
