@@ -3,7 +3,12 @@
 	// Get Location IDs and set EFA Baseurl
   $dep = htmlspecialchars($_GET['dep']);
   $arr = htmlspecialchars($_GET['arr']);
-	$baseurl = 'http://bsvg.efa.de/bsvagstd/XML_TRIP_REQUEST2?language=de&type_origin=stopID&name_origin='.$dep.'&type_destination=stopID&name_destination='.$arr.'&sessionID=0';
+  $interchange = htmlspecialchars($_GET['interchange']);
+  $changes ='';
+  if ($interchange == 0){
+    $changes = '&ptOptionsActive=1&maxChanges=0';
+  }
+	$baseurl = 'http://bsvg.efa.de/bsvagstd/XML_TRIP_REQUEST2?language=de&type_origin=stopID&name_origin='.$dep.'&type_destination=stopID&name_destination='.$arr.'&sessionID=0'.$changes;
 	/*****************************************/
 
 	// Run the helper function with the desired URL and echo the contents.
@@ -14,7 +19,7 @@
   //save sessionID
   $sid = $result[0]["sessionID"];
   //define URL for additional calls
-  $url2 ='http://bsvg.efa.de/bsvagstd/XML_TRIP_REQUEST2?language=de&command=tripNext&type_origin=stopID&name_origin='.$dep.'&type_destination=stopID&name_destination='.$arr.'&sessionID='.$sid.'&requestID=1';
+  $url2 ='http://bsvg.efa.de/bsvagstd/XML_TRIP_REQUEST2?language=de&command=tripNext&type_origin=stopID&name_origin='.$dep.'&type_destination=stopID&name_destination='.$arr.'&sessionID='.$sid.'&requestID=1'.$changes;
   $dump = get_url($url2);
 
   //print the final XML data

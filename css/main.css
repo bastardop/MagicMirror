@@ -152,7 +152,7 @@ body, html {
 	top: -35px;
 }
 
-.forecast-table {
+.forecast-table, .tramw-table{
 	float: right;
 	text-align: right;
 	font-size: 20px;
@@ -174,15 +174,15 @@ body, html {
 	color: #999;
 }
 .tram-table {
-	
+
 	font-size: 20px;
 	line-height: 20px;
 }
-.tram-table .line{
+.tram-table .line, .tramw-table .line{
 	width: 60px;
 }
 
-.tram-table .timetram{
+.tram-table .timetram, .tramw-table .timetram{
 	width: 100px;
 }
 .calendar-table {

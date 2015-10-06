@@ -36,14 +36,14 @@ function kmh2beaufort(kmh)
 	return 12;
 }
 
-function getxml(iddep, idarr, callback)
+function getxml(iddep, idarr, interchange, callback)
 {
 	var trams = [];
 	var t = 1;
 	//start AJAX XML call
 	$.ajax({
 		type: "GET",
-		url: "getxml.php?dep="+iddep+"&arr="+idarr,
+		url: "getxml.php?dep="+iddep+"&arr="+idarr+"interchange="+interchange,
 		cache: false,
 		dataType: "xml",
 		success: function(xml) {
@@ -67,7 +67,7 @@ function getxml(iddep, idarr, callback)
 						 departure = $(this).attr('nameWO');
 						 tramhour = $(this).find('itdDateTimeTarget').children("itdTime").attr('hour');
 						 trammin = $(this).find('itdDateTimeTarget').children("itdTime").attr('minute');
-						 if (trammin.length < 2){tarmmin = '0'+trammin;}
+						 if (trammin.length < 2){trammin = '0'+trammin;}
 						 if (tramhour.length < 2){tramhour = '0'+tramhour;}
 						 deptime = tramhour+':'+trammin;
 						}
@@ -103,18 +103,31 @@ jQuery(document).ready(function($) {
 
 	var lastCompliment;
 	var compliment;
+	//Seite alle 2h neu laden
+	setTimeout(function(){window.location.reload();}, 7200000);
 	$('#tramid').hide();
+	$('#tramwid').hide();
 	$(document).keypress(function(e){
       if (e.which == 65)
       {
 				$('#tramid').toggle();
 				$('#calid').toggle();
+				$('#foreca').toggle();
+				$('#tramwid').toggle();
+
+				//nach 60 Sekunden zum Startbildschrim zurück
+				setTimeout(function(){
+					$('#tramid').hide();
+					$('#tramwid').hide();
+					$('#calid').show();
+					$('#foreca').show();
+				}, 60000);
       }
   });
 
     moment.lang(lang);
 
-	(function checkVersion()
+	/*(function checkVersion()
 	{
 		$.getJSON('githash.php', {}, function(json, textStatus) {
 			if (json) {
@@ -127,7 +140,7 @@ jQuery(document).ready(function($) {
 		setTimeout(function() {
 			checkVersion();
 		}, 3000);
-	})();
+	})();*/
 
 	(function updateTime()
 	{
@@ -263,18 +276,20 @@ e.description = e.description.substring(0, 20)+'...';
 	{
 		var opacitytram = 1;
 		maxCalLength = 10
-		var depID = '26000354';
+		//define start and stop IDs for transitroute
+		var depID = '26000229';
 		var arrID = '26000178';
+		//Umsteigen 0=nein 1= ja
+		var interchange = 0;
 		var tramtable = $('<table/>').addClass('tram-table small');
 		var tramrow = $('<tr/>').css('opacity',opacity);
+
 		tramrow.append($('<td/>').html('Linie   ').addClass('dimmed line'));
     tramrow.append($('<td/>').html('Abfahrt   ').addClass('timetram description'));
     tramrow.append($('<td/>').html('Ankunft').addClass('timetram description'));
     tramtable.append(tramrow);
 
-		//define start and stop IDs for transitroute
-
-		getxml(depID,arrID, function(data){
+		getxml(depID,arrID,interchange, function(data){
 			tramtable.prepend($('<caption/>').html('Von '+data[0][0]+' nach '+data[0][1]).addClass('description'));
 			for(var f = 1; f < data.length; f++){
 				tramrow = $('<tr/>').css('opacity',opacitytram);
@@ -289,6 +304,41 @@ e.description = e.description.substring(0, 20)+'...';
 		$('#tramid').hide();
 		setTimeout(function() {
         	updateTram();
+        }, 600000);
+	})();
+
+	(function updateTramw()
+	{
+		var opacitytram = 1;
+		maxCalLength = 10
+		//define start and stop IDs for transitroute
+		var depID = '26000355';
+		var arrID = '26000342';
+		//Umsteigen 0=nein 1= ja
+		var interchange = 0;
+		var tramtable = $('<table/>').addClass('tramw-table small');
+		var tramrow = $('<tr/>').css('opacity',opacity);
+
+		tramrow.append($('<td/>').html('Linie   ').addClass('dimmed line'));
+    tramrow.append($('<td/>').html('Abfahrt   ').addClass('timetram description'));
+    tramrow.append($('<td/>').html('Ankunft').addClass('timetram description'));
+    tramtable.append(tramrow);
+
+		getxml(depID,arrID,interchange, function(data){
+			tramtable.prepend($('<caption/>').html('Von '+data[0][0]+' nach '+data[0][1]).addClass('description'));
+			for(var f = 1; f < data.length; f++){
+				tramrow = $('<tr/>').css('opacity',opacitytram);
+				tramrow.append($('<td/>').html(data[f][0]).addClass('dimmed line'));
+				tramrow.append($('<td/>').html(data[f][1]).addClass('timetram description'));
+				tramrow.append($('<td/>').html(data[f][2]).addClass('timetram description'));
+				tramtable.append(tramrow);
+				opacitytram -= 1 / maxCalLength;
+			}
+		});
+		$('.tramw').updateWithText(tramtable,1000);
+		$('#tramwid').hide();
+		setTimeout(function() {
+        	updateTramw();
         }, 600000);
 	})();
 
